@@ -93,26 +93,69 @@ async def send_data_to_subscribers(data):
         await websocket.send_json(json.dumps(data))
 
 
-# FastAPI CRUDL endpoints
+# FastAPI CRUD endpoints
 @app.post("/processed_agent_data/")
 async def create_processed_agent_data(data:List[ProcessedAgentData]):
     # Insert data to database
     # Send data to subscribers
+
 @app.get("/processed_agent_data/{processed_agent_data_id}", response_model=ProcessedAgentDataInDB)
 def read_processed_agent_data(processed_agent_data_id: int):
     # Get data by id
 
 @app.get("/processed_agent_data/", response_model=list[ProcessedAgentDataInDB])
 def list_processed_agent_data():
-    # Get list of data
+    query = processed_agent_data.select()
+
+    conn = engine.connect()
+    results = conn.execute(query).fetchall()
+    conn.close()
+    return [ProcessedAgentDataInDB(**result) for result in results]
 
 @app.put(
 "/processed_agent_data/{processed_agent_data_id}", response_model=ProcessedAgentDataInDB)
 def update_processed_agent_data(processed_agent_data_id: int, data: ProcessedAgentData):
-    # Update data
+    agent_data = data.agent_data
+
+    processed_agent_data_db = ProcessedAgentDataInDB(
+        id=processed_agent_data_id,
+        road_state=agent_data.road_state,
+        x=agent_data.accelerometer.x,
+        y=agent_data.accelerometer.y,
+        z=agent_data.accelerometer.z,
+        latitude=agent_data.gps.latitude,
+        longitude=agent_data.gps.longitude,
+        timestamp=agent_data.timestamp
+    )
+
+    # Update data in the database
+    query = (
+        processed_agent_data.update()
+        .where(processed_agent_data.c.id == processed_agent_data_id)
+        .values(
+            road_state=processed_agent_data_db.road_state,
+            x=processed_agent_data_db.x,
+            y=processed_agent_data_db.y,
+            z=processed_agent_data_db.z,
+            latitude=processed_agent_data_db.latitude,
+            longitude=processed_agent_data_db.longitude,
+            timestamp=processed_agent_data_db.timestamp
+        )
+    )
+    conn = engine.connect()
+    conn.execute(query)
+    conn.close()
+
+    # Return updated data
+    return processed_agent_data_db
+
 @app.delete("/processed_agent_data/{processed_agent_data_id}", response_model=ProcessedAgentDataInDB)
 def delete_processed_agent_data(processed_agent_data_id: int):
     # Delete by id
+    query = processed_agent_data.delete().where(processed_agent_data.c.id == processed_agent_data_id)
+    conn = engine.connect()
+    conn.execute(query)
+    conn.close()
 
 if __name__ == "__main__":
     import uvicorn
