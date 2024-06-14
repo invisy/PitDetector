@@ -5,15 +5,16 @@ from redis import Redis
 import paho.mqtt.client as mqtt
 from app.adapters.store_api_adapter import StoreApiAdapter
 from app.entities.processed_agent_data import ProcessedAgentData
-from config import STORE_API_BASE_URL, REDIS_HOST, REDIS_PORT, BATCH_SIZE, MQTT_TOPIC, MQTT_BROKER_HOST, MQTT_BROKER_PORT
+from config import (STORE_API_BASE_URL, REDIS_HOST, REDIS_PORT, BATCH_SIZE,
+                    MQTT_TOPIC, MQTT_BROKER_HOST, MQTT_BROKER_PORT)
 
 # Configure logging settings
 logging.basicConfig(
-    level=logging.INFO, # Set the log level to INFO (you can use logging.DEBUG for more detailed logs)
+    level=logging.INFO,  # Set the log level to INFO (you can use logging.DEBUG for more detailed logs)
     format="[%(asctime)s] [%(levelname)s] [%(module)s] %(message)s",
     handlers=[
-        logging.StreamHandler(), # Output log messages to the console
-        logging.FileHandler("app.log"), # Save log messages to a file
+        logging.StreamHandler(),  # Output log messages to the console
+        logging.FileHandler("app.log"),  # Save log messages to a file
     ],
 )
 
@@ -36,8 +37,9 @@ async def save_processed_agent_data(processed_agent_data: ProcessedAgentData):
         for _ in range(BATCH_SIZE):
             processed_agent_data = ProcessedAgentData.model_validate_json(redis_client.lpop("processed_agent_data"))
             processed_agent_data_batch.append(processed_agent_data)
-            store_adapter.save_data(processed_agent_data_batch=processed_agent_data_batch)
-            return {"status": "ok"}
+        if not store_adapter.save_data(processed_agent_data_batch=processed_agent_data_batch):
+            return {"status": "error"}
+    return {"status": "ok"}
 
 # MQTT
 client = mqtt.Client()
@@ -64,8 +66,9 @@ def on_message(client, userdata, msg):
             for _ in range(BATCH_SIZE):
                 processed_agent_data = ProcessedAgentData.model_validate_json(redis_client.lpop("processed_agent_data"))
                 processed_agent_data_batch.append(processed_agent_data)
-                store_adapter.save_data(processed_agent_data_batch=processed_agent_data_batch)
-                return {"status": "ok"}
+            if not store_adapter.save_data(processed_agent_data_batch=processed_agent_data_batch):
+                return {"status": "error"}
+        return {"status": "ok"}
     except Exception as e:
         logging.info(f"Error processing MQTT message: {e}")
 
