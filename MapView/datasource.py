@@ -10,7 +10,6 @@ from config import STORE_HOST, STORE_PORT
 # Pydantic models
 class ProcessedAgentData(BaseModel):
     road_state: str
-    user_id: int
     x: float
     y: float
     z: float
@@ -18,13 +17,12 @@ class ProcessedAgentData(BaseModel):
     longitude: float
     timestamp: datetime
 
-    @classmethod
     @field_validator("timestamp", mode="before")
     def check_timestamp(cls, value):
         if isinstance(value, datetime):
-            return value
+            return value.replace(tzinfo=None)
         try:
-            return datetime.fromisoformat(value)
+            return datetime.fromisoformat(value).replace(tzinfo=None)
         except (TypeError, ValueError):
             raise ValueError(
                 "Invalid timestamp format. Expected ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ)."
@@ -32,9 +30,8 @@ class ProcessedAgentData(BaseModel):
 
 
 class Datasource:
-    def __init__(self, user_id: int):
+    def __init__(self):
         self.index = 0
-        self.user_id = user_id
         self.connection_status = None
         self._new_points = []
         asyncio.ensure_future(self.connect_to_server())
@@ -46,7 +43,7 @@ class Datasource:
         return points
 
     async def connect_to_server(self):
-        uri = f"ws://{STORE_HOST}:{STORE_PORT}/ws/{self.user_id}"
+        uri = f"ws://{STORE_HOST}:{STORE_PORT}/ws/"
         while True:
             Logger.debug("CONNECT TO SERVER")
             async with websockets.connect(uri) as websocket:

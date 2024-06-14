@@ -52,6 +52,7 @@ async def websocket_endpoint(websocket: WebSocket):
 # Function to send data to subscribed users
 async def send_data_to_subscribers(data):
     for websocket in subscriptions:
+        data = [json.loads(item.json()) for item in data]
         await websocket.send_json(json.dumps(data))
 
 
@@ -77,14 +78,16 @@ async def create_processed_agent_data(data: List[ProcessedAgentData], response_m
         query = processed_agent_data_table.insert().returning(processed_agent_data_table)
 
         results = await session.execute(query, data_to_insert)
-        data = results.mappings().all()
-        if len(data) != len(data_to_insert):
+        result_data = results.mappings().all()
+        if len(result_data) != len(data_to_insert):
             raise Exception("Error inserting data")
 
-    # Send data to subscribers
-    await send_data_to_subscribers(data)
+    result_models = [ProcessedAgentDataInDB(**result) for result in result_data]
 
-    return [ProcessedAgentDataInDB(**result) for result in data]
+    # Send data to subscribers
+    await send_data_to_subscribers(result_models)
+
+    return result_models
 
 
 @app.get("/processed_agent_data/{processed_agent_data_id}", response_model=ProcessedAgentDataInDB)
