@@ -128,8 +128,11 @@ services:
     environment:
       MQTT_BROKER_HOST: mqtt
       MQTT_BROKER_PORT: 1883
-      MQTT_TOPIC: agent_data_topic
+      MQTT_AGENT_TOPIC: "agent_data_topic"
+      MQTT_PARKING_TOPIC: "parking_data_topic"
       DELAY: 0.1
+    volumes:
+      - ../../fake-agent/docker/data:/usr/agent/data
     networks:
       - mqtt_network
 

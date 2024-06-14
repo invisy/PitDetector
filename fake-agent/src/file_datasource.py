@@ -57,7 +57,7 @@ class AgentFileDatasource(AbstractFileDatasource):
         return AggregatedData(
             accelerometer=Accelerometer(*accelerometer_data),
             gps=Gps(*gps_data),
-            time=datetime.now()
+            timestamp=datetime.now()
         )
 
 
@@ -85,4 +85,5 @@ class ParkingFileDatasource(AbstractFileDatasource):
         return Parking(
             empty_count=int(parking_data[0]),
             gps=Gps(*parking_data[1:]),
+            timestamp=datetime.now()
         )
