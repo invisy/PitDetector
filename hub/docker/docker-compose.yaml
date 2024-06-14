@@ -23,7 +23,7 @@ services:
       POSTGRES_DB: test_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./db/structure.sql:/docker-entrypoint-initdb.d/structure.sql
+      - ../../store/docker/db/structure.sql:/docker-entrypoint-initdb.d/structure.sql
     ports:
       - "1235:5432"
     networks:
