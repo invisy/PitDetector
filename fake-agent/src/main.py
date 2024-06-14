@@ -1,8 +1,12 @@
+import threading
+
 from paho.mqtt import client as mqtt_client
 import time
+
+from file_datasource import AgentFileDatasource, ParkingFileDatasource
 from schema.aggregated_data_schema import AggregatedDataSchema
-from file_datasource import FileDatasource
 import config
+from schema.parking_schema import ParkingSchema
 
 
 def connect_mqtt(broker, port):
@@ -22,12 +26,12 @@ def connect_mqtt(broker, port):
     return client
 
 
-def publish(client, topic, datasource, delay):
+def publish(client, topic, datasource, schema, delay):
     datasource.startReading()
     while True:
         time.sleep(delay)
         data = datasource.read()
-        msg = AggregatedDataSchema().dumps(data)
+        msg = schema().dumps(data)
         result = client.publish(topic, msg)
         # result: [0, 1]
         status = result[0]
@@ -41,10 +45,19 @@ def publish(client, topic, datasource, delay):
 def run():
     # Prepare mqtt client
     client = connect_mqtt(config.MQTT_BROKER_HOST, config.MQTT_BROKER_PORT)
-    # Prepare datasource
-    datasource = FileDatasource("data/accelerometer.csv", "data/gps.csv")
+    # Prepare datasources
+    agent_datasource = AgentFileDatasource("data/accelerometer.csv", "data/gps.csv")
+    parking_datasource = ParkingFileDatasource("data/parking.csv")
+
     # Infinity publish data
-    publish(client, config.MQTT_TOPIC, datasource, config.DELAY)
+    thread1 = threading.Thread(target=publish, args=(client, config.MQTT_AGENT_TOPIC, agent_datasource,
+                                                     AggregatedDataSchema, config.DELAY))
+    thread2 = threading.Thread(target=publish, args=(client, config.MQTT_PARKING_TOPIC, parking_datasource,
+                                                     ParkingSchema, config.DELAY))
+    thread1.start()
+    thread2.start()
+    thread1.join()
+    thread2.join()
 
 
 if __name__ == '__main__':

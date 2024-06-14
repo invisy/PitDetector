@@ -1,5 +1,6 @@
 from marshmallow import Schema, fields
-from accelerometer_schema import AccelerometerSchema
+
+from schema.accelerometer_schema import AccelerometerSchema
 from schema.gps_schema import GpsSchema
 
 

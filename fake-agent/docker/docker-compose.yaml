@@ -15,13 +15,16 @@ services:
       mqtt_network:
   fake_agent:
     container_name: agent
-    build: ../
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
     depends_on:
       - mqtt
     environment:
       MQTT_BROKER_HOST: "mqtt"
       MQTT_BROKER_PORT: 1883
-      MQTT_TOPIC: "agent_data_topic"
+      MQTT_AGENT_TOPIC: "agent_data_topic"
+      MQTT_PARKING_TOPIC: "parking_data_topic"
       DELAY: 0.1
     volumes:
       - ./data:/usr/agent/data
